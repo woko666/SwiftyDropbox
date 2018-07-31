@@ -570,6 +570,13 @@ open class DownloadRequestMemory<RSerial: JSONSerializer, ESerial: JSONSerialize
         self.request = request
         super.init(responseSerializer: responseSerializer, errorSerializer: errorSerializer)
     }
+    
+    @discardableResult open func stream(_ streamHandler: @escaping ((Data) -> Void)) -> Self {
+        self.request.stream { data in
+            streamHandler(data)
+        }
+        return self
+    }
 
     @discardableResult open func progress(_ progressHandler: @escaping ((Progress) -> Void)) -> Self {
         self.request.downloadProgress { progressData in
@@ -582,7 +589,7 @@ open class DownloadRequestMemory<RSerial: JSONSerializer, ESerial: JSONSerialize
         self.request.cancel()
     }
 
-    @discardableResult open func response(queue: DispatchQueue? = nil, completionHandler: @escaping ((RSerial.ValueType, Data)?, CallError<ESerial.ValueType>?) -> Void) -> Self {
+    @discardableResult open func response(queue: DispatchQueue? = nil, completionHandler: @escaping ((RSerial.ValueType, Data?)?, CallError<ESerial.ValueType>?) -> Void) -> Self {
         self.request.validate().response(queue: queue) { response in
             if let error = response.error {
                 completionHandler(nil, self.handleResponseError(response.response, data: response.data, error: error))
@@ -592,7 +599,7 @@ open class DownloadRequestMemory<RSerial: JSONSerializer, ESerial: JSONSerialize
                 let resultData = result.data(using: .utf8, allowLossyConversion: false)
                 let resultObject = self.responseSerializer.deserialize(SerializeUtil.parseJSON(resultData!))
 
-                completionHandler((resultObject, response.data!), nil)
+                completionHandler((resultObject, response.data), nil)
             }
         }
         return self
