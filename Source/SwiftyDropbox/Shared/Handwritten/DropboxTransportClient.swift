@@ -200,7 +200,8 @@ open class DropboxTransportClient {
     }
 
     public func request<ASerial, RSerial, ESerial>(_ route: Route<ASerial, RSerial, ESerial>,
-                        serverArgs: ASerial.ValueType) -> DownloadRequestMemory<RSerial, ESerial> {
+                        serverArgs: ASerial.ValueType,
+                        additionalHeaders: [String:String]? = nil) -> DownloadRequestMemory<RSerial, ESerial> {
         let host = route.attrs["host"]! ?? "api"
         let url = "\(self.baseHosts[host]!)/\(route.namespace)/\(route.name)"
         let routeStyle: RouteStyle = RouteStyle(rawValue: route.attrs["style"]!!)!
@@ -208,7 +209,12 @@ open class DropboxTransportClient {
         let jsonRequestObj = route.argSerializer.serialize(serverArgs)
         let rawJsonRequest = SerializeUtil.dumpJSON(jsonRequestObj)
 
-        let headers = getHeaders(routeStyle, jsonRequest: rawJsonRequest, host: host)
+        var headers = getHeaders(routeStyle, jsonRequest: rawJsonRequest, host: host)
+        if let additionalHeaders = additionalHeaders {
+            for pair in additionalHeaders {
+                headers[pair.key] = pair.value
+            }
+        }
 
         let request = self.backgroundManager.request(url, method: .post, headers: headers)
 

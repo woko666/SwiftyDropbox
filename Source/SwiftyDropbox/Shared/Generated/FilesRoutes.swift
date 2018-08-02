@@ -315,10 +315,10 @@ open class FilesRoutes {
     ///
     ///  - returns: Through the response callback, the caller will receive a `Files.FileMetadata` object on success or a
     /// `Files.DownloadError` object on failure.
-    @discardableResult open func download(path: String, rev: String? = nil) -> DownloadRequestMemory<Files.FileMetadataSerializer, Files.DownloadErrorSerializer> {
+    @discardableResult open func download(path: String, rev: String? = nil, headers:[String:String]? = nil) -> DownloadRequestMemory<Files.FileMetadataSerializer, Files.DownloadErrorSerializer> {
         let route = Files.download
         let serverArgs = Files.DownloadArg(path: path, rev: rev)
-        return client.request(route, serverArgs: serverArgs)
+        return client.request(route, serverArgs: serverArgs, additionalHeaders:headers)
     }
 
     /// Download a folder from the user's Dropbox, as a zip file. The folder must be less than 1 GB in size and have
