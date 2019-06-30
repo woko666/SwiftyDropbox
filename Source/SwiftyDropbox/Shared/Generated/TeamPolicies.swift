@@ -8,6 +8,57 @@ import Foundation
 
 /// Datatypes and serializers for the team_policies namespace
 open class TeamPolicies {
+    /// The CameraUploadsPolicyState union
+    public enum CameraUploadsPolicyState: CustomStringConvertible {
+        /// Background camera uploads are disabled.
+        case disabled
+        /// Background camera uploads are allowed.
+        case enabled
+        /// An unspecified error.
+        case other
+
+        public var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(CameraUploadsPolicyStateSerializer().serialize(self)))"
+        }
+    }
+    open class CameraUploadsPolicyStateSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: CameraUploadsPolicyState) -> JSON {
+            switch value {
+                case .disabled:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("disabled")
+                    return .dictionary(d)
+                case .enabled:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("enabled")
+                    return .dictionary(d)
+                case .other:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("other")
+                    return .dictionary(d)
+            }
+        }
+        open func deserialize(_ json: JSON) -> CameraUploadsPolicyState {
+            switch json {
+                case .dictionary(let d):
+                    let tag = Serialization.getTag(d)
+                    switch tag {
+                        case "disabled":
+                            return CameraUploadsPolicyState.disabled
+                        case "enabled":
+                            return CameraUploadsPolicyState.enabled
+                        case "other":
+                            return CameraUploadsPolicyState.other
+                        default:
+                            return CameraUploadsPolicyState.other
+                    }
+                default:
+                    fatalError("Failed to deserialize")
+            }
+        }
+    }
+
     /// The EmmState union
     public enum EmmState: CustomStringConvertible {
         /// Emm token is disabled.
@@ -161,6 +212,57 @@ open class TeamPolicies {
         }
     }
 
+    /// The PaperDefaultFolderPolicy union
+    public enum PaperDefaultFolderPolicy: CustomStringConvertible {
+        /// Everyone in team will be the default option when creating a folder in Paper.
+        case everyoneInTeam
+        /// Invite only will be the default option when creating a folder in Paper.
+        case inviteOnly
+        /// An unspecified error.
+        case other
+
+        public var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(PaperDefaultFolderPolicySerializer().serialize(self)))"
+        }
+    }
+    open class PaperDefaultFolderPolicySerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: PaperDefaultFolderPolicy) -> JSON {
+            switch value {
+                case .everyoneInTeam:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("everyone_in_team")
+                    return .dictionary(d)
+                case .inviteOnly:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("invite_only")
+                    return .dictionary(d)
+                case .other:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("other")
+                    return .dictionary(d)
+            }
+        }
+        open func deserialize(_ json: JSON) -> PaperDefaultFolderPolicy {
+            switch json {
+                case .dictionary(let d):
+                    let tag = Serialization.getTag(d)
+                    switch tag {
+                        case "everyone_in_team":
+                            return PaperDefaultFolderPolicy.everyoneInTeam
+                        case "invite_only":
+                            return PaperDefaultFolderPolicy.inviteOnly
+                        case "other":
+                            return PaperDefaultFolderPolicy.other
+                        default:
+                            return PaperDefaultFolderPolicy.other
+                    }
+                default:
+                    fatalError("Failed to deserialize")
+            }
+        }
+    }
+
     /// The PaperDeploymentPolicy union
     public enum PaperDeploymentPolicy: CustomStringConvertible {
         /// All team members have access to Paper.
@@ -206,6 +308,57 @@ open class TeamPolicies {
                             return PaperDeploymentPolicy.other
                         default:
                             return PaperDeploymentPolicy.other
+                    }
+                default:
+                    fatalError("Failed to deserialize")
+            }
+        }
+    }
+
+    /// The PaperDesktopPolicy union
+    public enum PaperDesktopPolicy: CustomStringConvertible {
+        /// Do not allow team members to use Paper Desktop.
+        case disabled
+        /// Allow team members to use Paper Desktop.
+        case enabled
+        /// An unspecified error.
+        case other
+
+        public var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(PaperDesktopPolicySerializer().serialize(self)))"
+        }
+    }
+    open class PaperDesktopPolicySerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: PaperDesktopPolicy) -> JSON {
+            switch value {
+                case .disabled:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("disabled")
+                    return .dictionary(d)
+                case .enabled:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("enabled")
+                    return .dictionary(d)
+                case .other:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("other")
+                    return .dictionary(d)
+            }
+        }
+        open func deserialize(_ json: JSON) -> PaperDesktopPolicy {
+            switch json {
+                case .dictionary(let d):
+                    let tag = Serialization.getTag(d)
+                    switch tag {
+                        case "disabled":
+                            return PaperDesktopPolicy.disabled
+                        case "enabled":
+                            return PaperDesktopPolicy.enabled
+                        case "other":
+                            return PaperDesktopPolicy.other
+                        default:
+                            return PaperDesktopPolicy.other
                     }
                 default:
                     fatalError("Failed to deserialize")
@@ -813,14 +966,14 @@ open class TeamPolicies {
     /// Policies governing team members.
     open class TeamMemberPolicies: CustomStringConvertible {
         /// Policies governing sharing.
-        open let sharing: TeamPolicies.TeamSharingPolicies
+        public let sharing: TeamPolicies.TeamSharingPolicies
         /// This describes the Enterprise Mobility Management (EMM) state for this team. This information can be used to
         /// understand if an organization is integrating with a third-party EMM vendor to further manage and apply
         /// restrictions upon the team's Dropbox usage on mobile devices. This is a new feature and in the future we'll
         /// be adding more new fields and additional documentation.
-        open let emmState: TeamPolicies.EmmState
+        public let emmState: TeamPolicies.EmmState
         /// The admin policy around the Dropbox Office Add-In for this team.
-        open let officeAddin: TeamPolicies.OfficeAddInPolicy
+        public let officeAddin: TeamPolicies.OfficeAddInPolicy
         public init(sharing: TeamPolicies.TeamSharingPolicies, emmState: TeamPolicies.EmmState, officeAddin: TeamPolicies.OfficeAddInPolicy) {
             self.sharing = sharing
             self.emmState = emmState
@@ -856,11 +1009,11 @@ open class TeamPolicies {
     /// Policies governing sharing within and outside of the team.
     open class TeamSharingPolicies: CustomStringConvertible {
         /// Who can join folders shared by team members.
-        open let sharedFolderMemberPolicy: TeamPolicies.SharedFolderMemberPolicy
+        public let sharedFolderMemberPolicy: TeamPolicies.SharedFolderMemberPolicy
         /// Which shared folders team members can join.
-        open let sharedFolderJoinPolicy: TeamPolicies.SharedFolderJoinPolicy
+        public let sharedFolderJoinPolicy: TeamPolicies.SharedFolderJoinPolicy
         /// Who can view shared links owned by team members.
-        open let sharedLinkCreatePolicy: TeamPolicies.SharedLinkCreatePolicy
+        public let sharedLinkCreatePolicy: TeamPolicies.SharedLinkCreatePolicy
         public init(sharedFolderMemberPolicy: TeamPolicies.SharedFolderMemberPolicy, sharedFolderJoinPolicy: TeamPolicies.SharedFolderJoinPolicy, sharedLinkCreatePolicy: TeamPolicies.SharedLinkCreatePolicy) {
             self.sharedFolderMemberPolicy = sharedFolderMemberPolicy
             self.sharedFolderJoinPolicy = sharedFolderJoinPolicy
@@ -937,6 +1090,57 @@ open class TeamPolicies {
                             return TwoStepVerificationPolicy.other
                         default:
                             return TwoStepVerificationPolicy.other
+                    }
+                default:
+                    fatalError("Failed to deserialize")
+            }
+        }
+    }
+
+    /// The TwoStepVerificationState union
+    public enum TwoStepVerificationState: CustomStringConvertible {
+        /// Enabled require two factor authorization.
+        case required
+        /// Optional require two factor authorization.
+        case optional
+        /// An unspecified error.
+        case other
+
+        public var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(TwoStepVerificationStateSerializer().serialize(self)))"
+        }
+    }
+    open class TwoStepVerificationStateSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: TwoStepVerificationState) -> JSON {
+            switch value {
+                case .required:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("required")
+                    return .dictionary(d)
+                case .optional:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("optional")
+                    return .dictionary(d)
+                case .other:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("other")
+                    return .dictionary(d)
+            }
+        }
+        open func deserialize(_ json: JSON) -> TwoStepVerificationState {
+            switch json {
+                case .dictionary(let d):
+                    let tag = Serialization.getTag(d)
+                    switch tag {
+                        case "required":
+                            return TwoStepVerificationState.required
+                        case "optional":
+                            return TwoStepVerificationState.optional
+                        case "other":
+                            return TwoStepVerificationState.other
+                        default:
+                            return TwoStepVerificationState.other
                     }
                 default:
                     fatalError("Failed to deserialize")

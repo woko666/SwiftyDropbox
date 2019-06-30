@@ -71,6 +71,10 @@ open class Auth {
         case invalidSelectAdmin
         /// The user has been suspended.
         case userSuspended
+        /// The access token has expired.
+        case expiredAccessToken
+        /// The access token does not have the required scope to access the route.
+        case missingScope(Auth.TokenScopeError)
         /// An unspecified error.
         case other
 
@@ -98,6 +102,14 @@ open class Auth {
                     var d = [String: JSON]()
                     d[".tag"] = .str("user_suspended")
                     return .dictionary(d)
+                case .expiredAccessToken:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("expired_access_token")
+                    return .dictionary(d)
+                case .missingScope(let arg):
+                    var d = Serialization.getFields(Auth.TokenScopeErrorSerializer().serialize(arg))
+                    d[".tag"] = .str("missing_scope")
+                    return .dictionary(d)
                 case .other:
                     var d = [String: JSON]()
                     d[".tag"] = .str("other")
@@ -117,6 +129,11 @@ open class Auth {
                             return AuthError.invalidSelectAdmin
                         case "user_suspended":
                             return AuthError.userSuspended
+                        case "expired_access_token":
+                            return AuthError.expiredAccessToken
+                        case "missing_scope":
+                            let v = Auth.TokenScopeErrorSerializer().deserialize(json)
+                            return AuthError.missingScope(v)
                         case "other":
                             return AuthError.other
                         default:
@@ -233,9 +250,9 @@ open class Auth {
     /// Error occurred because the app is being rate limited.
     open class RateLimitError: CustomStringConvertible {
         /// The reason why the app is being rate limited.
-        open let reason: Auth.RateLimitReason
+        public let reason: Auth.RateLimitReason
         /// The number of seconds that the app should wait before making another request.
-        open let retryAfter: UInt64
+        public let retryAfter: UInt64
         public init(reason: Auth.RateLimitReason, retryAfter: UInt64 = 1) {
             self.reason = reason
             comparableValidator()(retryAfter)
@@ -320,9 +337,9 @@ open class Auth {
     /// The TokenFromOAuth1Arg struct
     open class TokenFromOAuth1Arg: CustomStringConvertible {
         /// The supplied OAuth 1.0 access token.
-        open let oauth1Token: String
+        public let oauth1Token: String
         /// The token secret associated with the supplied access token.
-        open let oauth1TokenSecret: String
+        public let oauth1TokenSecret: String
         public init(oauth1Token: String, oauth1TokenSecret: String) {
             stringValidator(minLength: 1)(oauth1Token)
             self.oauth1Token = oauth1Token
@@ -408,7 +425,7 @@ open class Auth {
     /// The TokenFromOAuth1Result struct
     open class TokenFromOAuth1Result: CustomStringConvertible {
         /// The OAuth 2.0 token generated from the supplied OAuth 1.0 token.
-        open let oauth2Token: String
+        public let oauth2Token: String
         public init(oauth2Token: String) {
             stringValidator(minLength: 1)(oauth2Token)
             self.oauth2Token = oauth2Token
@@ -436,11 +453,43 @@ open class Auth {
         }
     }
 
+    /// The TokenScopeError struct
+    open class TokenScopeError: CustomStringConvertible {
+        /// The required scope to access the route.
+        public let requiredScope: String
+        public init(requiredScope: String) {
+            stringValidator()(requiredScope)
+            self.requiredScope = requiredScope
+        }
+        open var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(TokenScopeErrorSerializer().serialize(self)))"
+        }
+    }
+    open class TokenScopeErrorSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: TokenScopeError) -> JSON {
+            let output = [ 
+            "required_scope": Serialization._StringSerializer.serialize(value.requiredScope),
+            ]
+            return .dictionary(output)
+        }
+        open func deserialize(_ json: JSON) -> TokenScopeError {
+            switch json {
+                case .dictionary(let dict):
+                    let requiredScope = Serialization._StringSerializer.deserialize(dict["required_scope"] ?? .null)
+                    return TokenScopeError(requiredScope: requiredScope)
+                default:
+                    fatalError("Type error deserializing")
+            }
+        }
+    }
+
 
     /// Stone Route Objects
 
     static let tokenFromOauth1 = Route(
         name: "token/from_oauth1",
+        version: 1,
         namespace: "auth",
         deprecated: false,
         argSerializer: Auth.TokenFromOAuth1ArgSerializer(),
@@ -451,6 +500,7 @@ open class Auth {
     )
     static let tokenRevoke = Route(
         name: "token/revoke",
+        version: 1,
         namespace: "auth",
         deprecated: false,
         argSerializer: Serialization._VoidSerializer,

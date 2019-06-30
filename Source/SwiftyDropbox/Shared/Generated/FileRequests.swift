@@ -8,55 +8,6 @@ import Foundation
 
 /// Datatypes and serializers for the file_requests namespace
 open class FileRequests {
-    /// Arguments for create.
-    open class CreateFileRequestArgs: CustomStringConvertible {
-        /// The title of the file request. Must not be empty.
-        open let title: String
-        /// The path of the folder in the Dropbox where uploaded files will be sent. For apps with the app folder
-        /// permission, this will be relative to the app folder.
-        open let destination: String
-        /// The deadline for the file request. Deadlines can only be set by Pro and Business accounts.
-        open let deadline: FileRequests.FileRequestDeadline?
-        /// Whether or not the file request should be open. If the file request is closed, it will not accept any file
-        /// submissions, but it can be opened later.
-        open let open: Bool
-        public init(title: String, destination: String, deadline: FileRequests.FileRequestDeadline? = nil, open: Bool = true) {
-            stringValidator(minLength: 1)(title)
-            self.title = title
-            stringValidator(pattern: "/(.|[\\r\\n])*")(destination)
-            self.destination = destination
-            self.deadline = deadline
-            self.open = open
-        }
-        open var description: String {
-            return "\(SerializeUtil.prepareJSONForSerialization(CreateFileRequestArgsSerializer().serialize(self)))"
-        }
-    }
-    open class CreateFileRequestArgsSerializer: JSONSerializer {
-        public init() { }
-        open func serialize(_ value: CreateFileRequestArgs) -> JSON {
-            let output = [ 
-            "title": Serialization._StringSerializer.serialize(value.title),
-            "destination": Serialization._StringSerializer.serialize(value.destination),
-            "deadline": NullableSerializer(FileRequests.FileRequestDeadlineSerializer()).serialize(value.deadline),
-            "open": Serialization._BoolSerializer.serialize(value.open),
-            ]
-            return .dictionary(output)
-        }
-        open func deserialize(_ json: JSON) -> CreateFileRequestArgs {
-            switch json {
-                case .dictionary(let dict):
-                    let title = Serialization._StringSerializer.deserialize(dict["title"] ?? .null)
-                    let destination = Serialization._StringSerializer.deserialize(dict["destination"] ?? .null)
-                    let deadline = NullableSerializer(FileRequests.FileRequestDeadlineSerializer()).deserialize(dict["deadline"] ?? .null)
-                    let open = Serialization._BoolSerializer.deserialize(dict["open"] ?? .number(1))
-                    return CreateFileRequestArgs(title: title, destination: destination, deadline: deadline, open: open)
-                default:
-                    fatalError("Type error deserializing")
-            }
-        }
-    }
-
     /// There is an error accessing the file requests functionality.
     public enum GeneralFileRequestsError: CustomStringConvertible {
         /// This user's Dropbox Business team doesn't allow file requests.
@@ -96,6 +47,129 @@ open class FileRequests {
                     }
                 default:
                     fatalError("Failed to deserialize")
+            }
+        }
+    }
+
+    /// There was an error counting the file requests.
+    public enum CountFileRequestsError: CustomStringConvertible {
+        /// This user's Dropbox Business team doesn't allow file requests.
+        case disabledForTeam
+        /// An unspecified error.
+        case other
+
+        public var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(CountFileRequestsErrorSerializer().serialize(self)))"
+        }
+    }
+    open class CountFileRequestsErrorSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: CountFileRequestsError) -> JSON {
+            switch value {
+                case .disabledForTeam:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("disabled_for_team")
+                    return .dictionary(d)
+                case .other:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("other")
+                    return .dictionary(d)
+            }
+        }
+        open func deserialize(_ json: JSON) -> CountFileRequestsError {
+            switch json {
+                case .dictionary(let d):
+                    let tag = Serialization.getTag(d)
+                    switch tag {
+                        case "disabled_for_team":
+                            return CountFileRequestsError.disabledForTeam
+                        case "other":
+                            return CountFileRequestsError.other
+                        default:
+                            fatalError("Unknown tag \(tag)")
+                    }
+                default:
+                    fatalError("Failed to deserialize")
+            }
+        }
+    }
+
+    /// Result for count.
+    open class CountFileRequestsResult: CustomStringConvertible {
+        /// The number file requests owner by this user.
+        public let fileRequestCount: UInt64
+        public init(fileRequestCount: UInt64) {
+            comparableValidator()(fileRequestCount)
+            self.fileRequestCount = fileRequestCount
+        }
+        open var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(CountFileRequestsResultSerializer().serialize(self)))"
+        }
+    }
+    open class CountFileRequestsResultSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: CountFileRequestsResult) -> JSON {
+            let output = [ 
+            "file_request_count": Serialization._UInt64Serializer.serialize(value.fileRequestCount),
+            ]
+            return .dictionary(output)
+        }
+        open func deserialize(_ json: JSON) -> CountFileRequestsResult {
+            switch json {
+                case .dictionary(let dict):
+                    let fileRequestCount = Serialization._UInt64Serializer.deserialize(dict["file_request_count"] ?? .null)
+                    return CountFileRequestsResult(fileRequestCount: fileRequestCount)
+                default:
+                    fatalError("Type error deserializing")
+            }
+        }
+    }
+
+    /// Arguments for create.
+    open class CreateFileRequestArgs: CustomStringConvertible {
+        /// The title of the file request. Must not be empty.
+        public let title: String
+        /// The path of the folder in the Dropbox where uploaded files will be sent. For apps with the app folder
+        /// permission, this will be relative to the app folder.
+        public let destination: String
+        /// The deadline for the file request. Deadlines can only be set by Professional and Business accounts.
+        public let deadline: FileRequests.FileRequestDeadline?
+        /// Whether or not the file request should be open. If the file request is closed, it will not accept any file
+        /// submissions, but it can be opened later.
+        public let open: Bool
+        public init(title: String, destination: String, deadline: FileRequests.FileRequestDeadline? = nil, open: Bool = true) {
+            stringValidator(minLength: 1)(title)
+            self.title = title
+            stringValidator(pattern: "/(.|[\\r\\n])*")(destination)
+            self.destination = destination
+            self.deadline = deadline
+            self.open = open
+        }
+        open var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(CreateFileRequestArgsSerializer().serialize(self)))"
+        }
+    }
+    open class CreateFileRequestArgsSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: CreateFileRequestArgs) -> JSON {
+            let output = [ 
+            "title": Serialization._StringSerializer.serialize(value.title),
+            "destination": Serialization._StringSerializer.serialize(value.destination),
+            "deadline": NullableSerializer(FileRequests.FileRequestDeadlineSerializer()).serialize(value.deadline),
+            "open": Serialization._BoolSerializer.serialize(value.open),
+            ]
+            return .dictionary(output)
+        }
+        open func deserialize(_ json: JSON) -> CreateFileRequestArgs {
+            switch json {
+                case .dictionary(let dict):
+                    let title = Serialization._StringSerializer.deserialize(dict["title"] ?? .null)
+                    let destination = Serialization._StringSerializer.deserialize(dict["destination"] ?? .null)
+                    let deadline = NullableSerializer(FileRequests.FileRequestDeadlineSerializer()).deserialize(dict["deadline"] ?? .null)
+                    let open = Serialization._BoolSerializer.deserialize(dict["open"] ?? .number(1))
+                    return CreateFileRequestArgs(title: title, destination: destination, deadline: deadline, open: open)
+                default:
+                    fatalError("Type error deserializing")
             }
         }
     }
@@ -305,26 +379,313 @@ open class FileRequests {
         }
     }
 
+    /// There was an error deleting all closed file requests.
+    public enum DeleteAllClosedFileRequestsError: CustomStringConvertible {
+        /// This user's Dropbox Business team doesn't allow file requests.
+        case disabledForTeam
+        /// An unspecified error.
+        case other
+        /// This file request ID was not found.
+        case notFound
+        /// The specified path is not a folder.
+        case notAFolder
+        /// This file request is not accessible to this app. Apps with the app folder permission can only access file
+        /// requests in their app folder.
+        case appLacksAccess
+        /// This user doesn't have permission to access or modify this file request.
+        case noPermission
+        /// This user's email address is not verified. File requests are only available on accounts with a verified
+        /// email address. Users can verify their email address here https://www.dropbox.com/help/317.
+        case emailUnverified
+        /// There was an error validating the request. For example, the title was invalid, or there were disallowed
+        /// characters in the destination path.
+        case validationError
+
+        public var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(DeleteAllClosedFileRequestsErrorSerializer().serialize(self)))"
+        }
+    }
+    open class DeleteAllClosedFileRequestsErrorSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: DeleteAllClosedFileRequestsError) -> JSON {
+            switch value {
+                case .disabledForTeam:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("disabled_for_team")
+                    return .dictionary(d)
+                case .other:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("other")
+                    return .dictionary(d)
+                case .notFound:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("not_found")
+                    return .dictionary(d)
+                case .notAFolder:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("not_a_folder")
+                    return .dictionary(d)
+                case .appLacksAccess:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("app_lacks_access")
+                    return .dictionary(d)
+                case .noPermission:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("no_permission")
+                    return .dictionary(d)
+                case .emailUnverified:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("email_unverified")
+                    return .dictionary(d)
+                case .validationError:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("validation_error")
+                    return .dictionary(d)
+            }
+        }
+        open func deserialize(_ json: JSON) -> DeleteAllClosedFileRequestsError {
+            switch json {
+                case .dictionary(let d):
+                    let tag = Serialization.getTag(d)
+                    switch tag {
+                        case "disabled_for_team":
+                            return DeleteAllClosedFileRequestsError.disabledForTeam
+                        case "other":
+                            return DeleteAllClosedFileRequestsError.other
+                        case "not_found":
+                            return DeleteAllClosedFileRequestsError.notFound
+                        case "not_a_folder":
+                            return DeleteAllClosedFileRequestsError.notAFolder
+                        case "app_lacks_access":
+                            return DeleteAllClosedFileRequestsError.appLacksAccess
+                        case "no_permission":
+                            return DeleteAllClosedFileRequestsError.noPermission
+                        case "email_unverified":
+                            return DeleteAllClosedFileRequestsError.emailUnverified
+                        case "validation_error":
+                            return DeleteAllClosedFileRequestsError.validationError
+                        default:
+                            fatalError("Unknown tag \(tag)")
+                    }
+                default:
+                    fatalError("Failed to deserialize")
+            }
+        }
+    }
+
+    /// Result for deleteAllClosed.
+    open class DeleteAllClosedFileRequestsResult: CustomStringConvertible {
+        /// The file requests deleted for this user.
+        public let fileRequests: Array<FileRequests.FileRequest>
+        public init(fileRequests: Array<FileRequests.FileRequest>) {
+            self.fileRequests = fileRequests
+        }
+        open var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(DeleteAllClosedFileRequestsResultSerializer().serialize(self)))"
+        }
+    }
+    open class DeleteAllClosedFileRequestsResultSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: DeleteAllClosedFileRequestsResult) -> JSON {
+            let output = [ 
+            "file_requests": ArraySerializer(FileRequests.FileRequestSerializer()).serialize(value.fileRequests),
+            ]
+            return .dictionary(output)
+        }
+        open func deserialize(_ json: JSON) -> DeleteAllClosedFileRequestsResult {
+            switch json {
+                case .dictionary(let dict):
+                    let fileRequests = ArraySerializer(FileRequests.FileRequestSerializer()).deserialize(dict["file_requests"] ?? .null)
+                    return DeleteAllClosedFileRequestsResult(fileRequests: fileRequests)
+                default:
+                    fatalError("Type error deserializing")
+            }
+        }
+    }
+
+    /// Arguments for delete.
+    open class DeleteFileRequestArgs: CustomStringConvertible {
+        /// List IDs of the file requests to delete.
+        public let ids: Array<String>
+        public init(ids: Array<String>) {
+            arrayValidator(itemValidator: stringValidator(minLength: 1, pattern: "[-_0-9a-zA-Z]+"))(ids)
+            self.ids = ids
+        }
+        open var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(DeleteFileRequestArgsSerializer().serialize(self)))"
+        }
+    }
+    open class DeleteFileRequestArgsSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: DeleteFileRequestArgs) -> JSON {
+            let output = [ 
+            "ids": ArraySerializer(Serialization._StringSerializer).serialize(value.ids),
+            ]
+            return .dictionary(output)
+        }
+        open func deserialize(_ json: JSON) -> DeleteFileRequestArgs {
+            switch json {
+                case .dictionary(let dict):
+                    let ids = ArraySerializer(Serialization._StringSerializer).deserialize(dict["ids"] ?? .null)
+                    return DeleteFileRequestArgs(ids: ids)
+                default:
+                    fatalError("Type error deserializing")
+            }
+        }
+    }
+
+    /// There was an error deleting these file requests.
+    public enum DeleteFileRequestError: CustomStringConvertible {
+        /// This user's Dropbox Business team doesn't allow file requests.
+        case disabledForTeam
+        /// An unspecified error.
+        case other
+        /// This file request ID was not found.
+        case notFound
+        /// The specified path is not a folder.
+        case notAFolder
+        /// This file request is not accessible to this app. Apps with the app folder permission can only access file
+        /// requests in their app folder.
+        case appLacksAccess
+        /// This user doesn't have permission to access or modify this file request.
+        case noPermission
+        /// This user's email address is not verified. File requests are only available on accounts with a verified
+        /// email address. Users can verify their email address here https://www.dropbox.com/help/317.
+        case emailUnverified
+        /// There was an error validating the request. For example, the title was invalid, or there were disallowed
+        /// characters in the destination path.
+        case validationError
+        /// One or more file requests currently open.
+        case fileRequestOpen
+
+        public var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(DeleteFileRequestErrorSerializer().serialize(self)))"
+        }
+    }
+    open class DeleteFileRequestErrorSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: DeleteFileRequestError) -> JSON {
+            switch value {
+                case .disabledForTeam:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("disabled_for_team")
+                    return .dictionary(d)
+                case .other:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("other")
+                    return .dictionary(d)
+                case .notFound:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("not_found")
+                    return .dictionary(d)
+                case .notAFolder:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("not_a_folder")
+                    return .dictionary(d)
+                case .appLacksAccess:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("app_lacks_access")
+                    return .dictionary(d)
+                case .noPermission:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("no_permission")
+                    return .dictionary(d)
+                case .emailUnverified:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("email_unverified")
+                    return .dictionary(d)
+                case .validationError:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("validation_error")
+                    return .dictionary(d)
+                case .fileRequestOpen:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("file_request_open")
+                    return .dictionary(d)
+            }
+        }
+        open func deserialize(_ json: JSON) -> DeleteFileRequestError {
+            switch json {
+                case .dictionary(let d):
+                    let tag = Serialization.getTag(d)
+                    switch tag {
+                        case "disabled_for_team":
+                            return DeleteFileRequestError.disabledForTeam
+                        case "other":
+                            return DeleteFileRequestError.other
+                        case "not_found":
+                            return DeleteFileRequestError.notFound
+                        case "not_a_folder":
+                            return DeleteFileRequestError.notAFolder
+                        case "app_lacks_access":
+                            return DeleteFileRequestError.appLacksAccess
+                        case "no_permission":
+                            return DeleteFileRequestError.noPermission
+                        case "email_unverified":
+                            return DeleteFileRequestError.emailUnverified
+                        case "validation_error":
+                            return DeleteFileRequestError.validationError
+                        case "file_request_open":
+                            return DeleteFileRequestError.fileRequestOpen
+                        default:
+                            fatalError("Unknown tag \(tag)")
+                    }
+                default:
+                    fatalError("Failed to deserialize")
+            }
+        }
+    }
+
+    /// Result for delete.
+    open class DeleteFileRequestsResult: CustomStringConvertible {
+        /// The file requests deleted by the request.
+        public let fileRequests: Array<FileRequests.FileRequest>
+        public init(fileRequests: Array<FileRequests.FileRequest>) {
+            self.fileRequests = fileRequests
+        }
+        open var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(DeleteFileRequestsResultSerializer().serialize(self)))"
+        }
+    }
+    open class DeleteFileRequestsResultSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: DeleteFileRequestsResult) -> JSON {
+            let output = [ 
+            "file_requests": ArraySerializer(FileRequests.FileRequestSerializer()).serialize(value.fileRequests),
+            ]
+            return .dictionary(output)
+        }
+        open func deserialize(_ json: JSON) -> DeleteFileRequestsResult {
+            switch json {
+                case .dictionary(let dict):
+                    let fileRequests = ArraySerializer(FileRequests.FileRequestSerializer()).deserialize(dict["file_requests"] ?? .null)
+                    return DeleteFileRequestsResult(fileRequests: fileRequests)
+                default:
+                    fatalError("Type error deserializing")
+            }
+        }
+    }
+
     /// A file request https://www.dropbox.com/help/9090 for receiving files into the user's Dropbox account.
     open class FileRequest: CustomStringConvertible {
         /// The ID of the file request.
-        open let id: String
+        public let id: String
         /// The URL of the file request.
-        open let url: String
+        public let url: String
         /// The title of the file request.
-        open let title: String
+        public let title: String
         /// The path of the folder in the Dropbox where uploaded files will be sent. This can be null if the destination
         /// was removed. For apps with the app folder permission, this will be relative to the app folder.
-        open let destination: String?
+        public let destination: String?
         /// When this file request was created.
-        open let created: Date
+        public let created: Date
         /// The deadline for this file request. Only set if the request has a deadline.
-        open let deadline: FileRequests.FileRequestDeadline?
+        public let deadline: FileRequests.FileRequestDeadline?
         /// Whether or not the file request is open. If the file request is closed, it will not accept any more file
         /// submissions.
-        open let isOpen: Bool
+        public let isOpen: Bool
         /// The number of files this file request has received.
-        open let fileCount: Int64
+        public let fileCount: Int64
         public init(id: String, url: String, title: String, created: Date, isOpen: Bool, fileCount: Int64, destination: String? = nil, deadline: FileRequests.FileRequestDeadline? = nil) {
             stringValidator(minLength: 1, pattern: "[-_0-9a-zA-Z]+")(id)
             self.id = id
@@ -380,9 +741,9 @@ open class FileRequests {
     /// The FileRequestDeadline struct
     open class FileRequestDeadline: CustomStringConvertible {
         /// The deadline for this file request.
-        open let deadline: Date
+        public let deadline: Date
         /// If set, allow uploads after the deadline has passed. These     uploads will be marked overdue.
-        open let allowLateUploads: FileRequests.GracePeriod?
+        public let allowLateUploads: FileRequests.GracePeriod?
         public init(deadline: Date, allowLateUploads: FileRequests.GracePeriod? = nil) {
             self.deadline = deadline
             self.allowLateUploads = allowLateUploads
@@ -415,7 +776,7 @@ open class FileRequests {
     /// Arguments for get.
     open class GetFileRequestArgs: CustomStringConvertible {
         /// The ID of the file request to retrieve.
-        open let id: String
+        public let id: String
         public init(id: String) {
             stringValidator(minLength: 1, pattern: "[-_0-9a-zA-Z]+")(id)
             self.id = id
@@ -612,6 +973,119 @@ open class FileRequests {
         }
     }
 
+    /// Arguments for listV2.
+    open class ListFileRequestsArg: CustomStringConvertible {
+        /// The maximum number of file requests that should be returned per request.
+        public let limit: UInt64
+        public init(limit: UInt64 = 1000) {
+            comparableValidator()(limit)
+            self.limit = limit
+        }
+        open var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(ListFileRequestsArgSerializer().serialize(self)))"
+        }
+    }
+    open class ListFileRequestsArgSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: ListFileRequestsArg) -> JSON {
+            let output = [ 
+            "limit": Serialization._UInt64Serializer.serialize(value.limit),
+            ]
+            return .dictionary(output)
+        }
+        open func deserialize(_ json: JSON) -> ListFileRequestsArg {
+            switch json {
+                case .dictionary(let dict):
+                    let limit = Serialization._UInt64Serializer.deserialize(dict["limit"] ?? .number(1000))
+                    return ListFileRequestsArg(limit: limit)
+                default:
+                    fatalError("Type error deserializing")
+            }
+        }
+    }
+
+    /// The ListFileRequestsContinueArg struct
+    open class ListFileRequestsContinueArg: CustomStringConvertible {
+        /// The cursor returned by the previous API call specified in the endpoint description.
+        public let cursor: String
+        public init(cursor: String) {
+            stringValidator()(cursor)
+            self.cursor = cursor
+        }
+        open var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(ListFileRequestsContinueArgSerializer().serialize(self)))"
+        }
+    }
+    open class ListFileRequestsContinueArgSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: ListFileRequestsContinueArg) -> JSON {
+            let output = [ 
+            "cursor": Serialization._StringSerializer.serialize(value.cursor),
+            ]
+            return .dictionary(output)
+        }
+        open func deserialize(_ json: JSON) -> ListFileRequestsContinueArg {
+            switch json {
+                case .dictionary(let dict):
+                    let cursor = Serialization._StringSerializer.deserialize(dict["cursor"] ?? .null)
+                    return ListFileRequestsContinueArg(cursor: cursor)
+                default:
+                    fatalError("Type error deserializing")
+            }
+        }
+    }
+
+    /// There was an error retrieving the file requests.
+    public enum ListFileRequestsContinueError: CustomStringConvertible {
+        /// This user's Dropbox Business team doesn't allow file requests.
+        case disabledForTeam
+        /// An unspecified error.
+        case other
+        /// The cursor is invalid.
+        case invalidCursor
+
+        public var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(ListFileRequestsContinueErrorSerializer().serialize(self)))"
+        }
+    }
+    open class ListFileRequestsContinueErrorSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: ListFileRequestsContinueError) -> JSON {
+            switch value {
+                case .disabledForTeam:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("disabled_for_team")
+                    return .dictionary(d)
+                case .other:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("other")
+                    return .dictionary(d)
+                case .invalidCursor:
+                    var d = [String: JSON]()
+                    d[".tag"] = .str("invalid_cursor")
+                    return .dictionary(d)
+            }
+        }
+        open func deserialize(_ json: JSON) -> ListFileRequestsContinueError {
+            switch json {
+                case .dictionary(let d):
+                    let tag = Serialization.getTag(d)
+                    switch tag {
+                        case "disabled_for_team":
+                            return ListFileRequestsContinueError.disabledForTeam
+                        case "other":
+                            return ListFileRequestsContinueError.other
+                        case "invalid_cursor":
+                            return ListFileRequestsContinueError.invalidCursor
+                        default:
+                            fatalError("Unknown tag \(tag)")
+                    }
+                default:
+                    fatalError("Failed to deserialize")
+            }
+        }
+    }
+
     /// There was an error retrieving the file requests.
     public enum ListFileRequestsError: CustomStringConvertible {
         /// This user's Dropbox Business team doesn't allow file requests.
@@ -659,7 +1133,7 @@ open class FileRequests {
     open class ListFileRequestsResult: CustomStringConvertible {
         /// The file requests owned by this user. Apps with the app folder permission will only see file requests in
         /// their app folder.
-        open let fileRequests: Array<FileRequests.FileRequest>
+        public let fileRequests: Array<FileRequests.FileRequest>
         public init(fileRequests: Array<FileRequests.FileRequest>) {
             self.fileRequests = fileRequests
         }
@@ -686,19 +1160,62 @@ open class FileRequests {
         }
     }
 
+    /// Result for listV2 and listContinue.
+    open class ListFileRequestsV2Result: CustomStringConvertible {
+        /// The file requests owned by this user. Apps with the app folder permission will only see file requests in
+        /// their app folder.
+        public let fileRequests: Array<FileRequests.FileRequest>
+        /// Pass the cursor into listContinue to obtain additional file requests.
+        public let cursor: String
+        /// Is true if there are additional file requests that have not been returned yet. An additional call to
+        /// :route:list/continue` can retrieve them.
+        public let hasMore: Bool
+        public init(fileRequests: Array<FileRequests.FileRequest>, cursor: String, hasMore: Bool) {
+            self.fileRequests = fileRequests
+            stringValidator()(cursor)
+            self.cursor = cursor
+            self.hasMore = hasMore
+        }
+        open var description: String {
+            return "\(SerializeUtil.prepareJSONForSerialization(ListFileRequestsV2ResultSerializer().serialize(self)))"
+        }
+    }
+    open class ListFileRequestsV2ResultSerializer: JSONSerializer {
+        public init() { }
+        open func serialize(_ value: ListFileRequestsV2Result) -> JSON {
+            let output = [ 
+            "file_requests": ArraySerializer(FileRequests.FileRequestSerializer()).serialize(value.fileRequests),
+            "cursor": Serialization._StringSerializer.serialize(value.cursor),
+            "has_more": Serialization._BoolSerializer.serialize(value.hasMore),
+            ]
+            return .dictionary(output)
+        }
+        open func deserialize(_ json: JSON) -> ListFileRequestsV2Result {
+            switch json {
+                case .dictionary(let dict):
+                    let fileRequests = ArraySerializer(FileRequests.FileRequestSerializer()).deserialize(dict["file_requests"] ?? .null)
+                    let cursor = Serialization._StringSerializer.deserialize(dict["cursor"] ?? .null)
+                    let hasMore = Serialization._BoolSerializer.deserialize(dict["has_more"] ?? .null)
+                    return ListFileRequestsV2Result(fileRequests: fileRequests, cursor: cursor, hasMore: hasMore)
+                default:
+                    fatalError("Type error deserializing")
+            }
+        }
+    }
+
     /// Arguments for update.
     open class UpdateFileRequestArgs: CustomStringConvertible {
         /// The ID of the file request to update.
-        open let id: String
+        public let id: String
         /// The new title of the file request. Must not be empty.
-        open let title: String?
+        public let title: String?
         /// The new path of the folder in the Dropbox where uploaded files will be sent. For apps with the app folder
         /// permission, this will be relative to the app folder.
-        open let destination: String?
-        /// The new deadline for the file request.
-        open let deadline: FileRequests.UpdateFileRequestDeadline
+        public let destination: String?
+        /// The new deadline for the file request. Deadlines can only be set by Professional and Business accounts.
+        public let deadline: FileRequests.UpdateFileRequestDeadline
         /// Whether to set this file request as open or closed.
-        open let open: Bool?
+        public let open: Bool?
         public init(id: String, title: String? = nil, destination: String? = nil, deadline: FileRequests.UpdateFileRequestDeadline = .noUpdate, open: Bool? = nil) {
             stringValidator(minLength: 1, pattern: "[-_0-9a-zA-Z]+")(id)
             self.id = id
@@ -889,8 +1406,20 @@ open class FileRequests {
 
     /// Stone Route Objects
 
+    static let count = Route(
+        name: "count",
+        version: 1,
+        namespace: "file_requests",
+        deprecated: false,
+        argSerializer: Serialization._VoidSerializer,
+        responseSerializer: FileRequests.CountFileRequestsResultSerializer(),
+        errorSerializer: FileRequests.CountFileRequestsErrorSerializer(),
+        attrs: ["host": "api",
+                "style": "rpc"]
+    )
     static let create = Route(
         name: "create",
+        version: 1,
         namespace: "file_requests",
         deprecated: false,
         argSerializer: FileRequests.CreateFileRequestArgsSerializer(),
@@ -899,8 +1428,31 @@ open class FileRequests {
         attrs: ["host": "api",
                 "style": "rpc"]
     )
+    static let delete = Route(
+        name: "delete",
+        version: 1,
+        namespace: "file_requests",
+        deprecated: false,
+        argSerializer: FileRequests.DeleteFileRequestArgsSerializer(),
+        responseSerializer: FileRequests.DeleteFileRequestsResultSerializer(),
+        errorSerializer: FileRequests.DeleteFileRequestErrorSerializer(),
+        attrs: ["host": "api",
+                "style": "rpc"]
+    )
+    static let deleteAllClosed = Route(
+        name: "delete_all_closed",
+        version: 1,
+        namespace: "file_requests",
+        deprecated: false,
+        argSerializer: Serialization._VoidSerializer,
+        responseSerializer: FileRequests.DeleteAllClosedFileRequestsResultSerializer(),
+        errorSerializer: FileRequests.DeleteAllClosedFileRequestsErrorSerializer(),
+        attrs: ["host": "api",
+                "style": "rpc"]
+    )
     static let get = Route(
         name: "get",
+        version: 1,
         namespace: "file_requests",
         deprecated: false,
         argSerializer: FileRequests.GetFileRequestArgsSerializer(),
@@ -909,8 +1461,20 @@ open class FileRequests {
         attrs: ["host": "api",
                 "style": "rpc"]
     )
+    static let listV2 = Route(
+        name: "list",
+        version: 2,
+        namespace: "file_requests",
+        deprecated: false,
+        argSerializer: FileRequests.ListFileRequestsArgSerializer(),
+        responseSerializer: FileRequests.ListFileRequestsV2ResultSerializer(),
+        errorSerializer: FileRequests.ListFileRequestsErrorSerializer(),
+        attrs: ["host": "api",
+                "style": "rpc"]
+    )
     static let list_ = Route(
         name: "list",
+        version: 1,
         namespace: "file_requests",
         deprecated: false,
         argSerializer: Serialization._VoidSerializer,
@@ -919,8 +1483,20 @@ open class FileRequests {
         attrs: ["host": "api",
                 "style": "rpc"]
     )
+    static let listContinue = Route(
+        name: "list/continue",
+        version: 1,
+        namespace: "file_requests",
+        deprecated: false,
+        argSerializer: FileRequests.ListFileRequestsContinueArgSerializer(),
+        responseSerializer: FileRequests.ListFileRequestsV2ResultSerializer(),
+        errorSerializer: FileRequests.ListFileRequestsContinueErrorSerializer(),
+        attrs: ["host": "api",
+                "style": "rpc"]
+    )
     static let update = Route(
         name: "update",
+        version: 1,
         namespace: "file_requests",
         deprecated: false,
         argSerializer: FileRequests.UpdateFileRequestArgsSerializer(),
